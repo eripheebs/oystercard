@@ -2,15 +2,16 @@ require 'oystercard'
 
 describe Oystercard do
   let(:journey_class) { double :journey_class }
-  subject(:card) {described_class.new(journey_class)}
+  subject(:card) { described_class.new(journey_class) }
   let(:station) { double :station }
   let(:station) { double :station }
-  let(:journey) { double :journey}
+  let(:journey) { double :journey }
 
   before do
     allow(journey).to receive(:finish).with(station).and_return(true)
     allow(journey).to receive(:calculate_fare).and_return(1)
     allow(journey_class).to receive(:new).with(station).and_return(journey)
+    allow(journey_class).to receive(:new).with(nil).and_return(journey)
   end
 
   describe '#balance' do
@@ -20,24 +21,36 @@ describe Oystercard do
   end
 
   context 'when is topped up' do
-    before { card.top_up(described_class::MAX_AMOUNT) }
+    before(:each) { card.top_up(described_class::MIN_FARE) }
 
     describe '#top_up' do
       it 'raises' do
         error = described_class::MAX_ERROR
-        expect { card.top_up 1 }.to raise_error error
+        max = described_class::MAX_AMOUNT
+        expect { card.top_up max }.to raise_error error
+      end
+    end
+
+    context 'touches out and touches out again' do
+      it 'charges you a penalty fare' do
+        penalty = described_class::PENALTY_FARE
+        min = described_class::MIN_FARE
+        message = described_class::MIN_ERROR
+        card.top_up(penalty - min)
+        allow(journey).to receive(:calculate_fare).and_return(6)
+        card.touch_out(station)
+        expect { card.touch_in(station) }.to raise_error message
       end
     end
 
     describe '#journeys' do
       it 'keeps track of journeys' do
         card.touch_in(station)
-        expect{ card.touch_out(station) }.to change{ card.journeys.size }.by(1)
+        expect { card.touch_out(station) }.to change { card.journeys.size }.by(1)
       end
     end
 
     describe '#in_journey?' do
-
       it 'starts out not in journey' do
         expect(card).to_not be_in_journey
       end
@@ -52,7 +65,18 @@ describe Oystercard do
         it 'puts in journey' do
           expect(card).to be_in_journey
         end
+      end
 
+      describe 'and touches in again' do
+        it 'charges you a penalty fare' do
+          penalty = described_class::PENALTY_FARE
+          min = described_class::MIN_FARE
+          message = described_class::MIN_ERROR
+          card.top_up(penalty - min)
+          card.touch_in(station)
+          allow(journey).to receive(:calculate_fare).and_return(6)
+          expect { card.touch_in(station) }.to raise_error message
+        end
       end
 
       describe '#touch_out' do
@@ -63,7 +87,7 @@ describe Oystercard do
 
         it 'deducts minimum fare' do
           min_fare = described_class::MIN_FARE
-          expect{ card.touch_out station }.to change{ card.balance }.by(-min_fare)
+          expect { card.touch_out station }.to change { card.balance }.by(-min_fare)
         end
       end
     end
@@ -72,16 +96,15 @@ describe Oystercard do
   context 'when not topped up' do
     describe '#top_up' do
       it 'increases balance by given amount' do
-        expect { card.top_up(8) }.to change{ card.balance }.by(8)
+        expect { card.top_up(8) }.to change { card.balance }.by(8)
       end
     end
 
     describe '#touch_in' do
       it 'raises error' do
         error = described_class::MIN_ERROR
-        expect{ card.touch_in station }.to raise_error error
+        expect { card.touch_in station }.to raise_error error
       end
     end
   end
-
 end

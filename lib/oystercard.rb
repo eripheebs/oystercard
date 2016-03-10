@@ -4,6 +4,7 @@ class Oystercard
 
   MAX_AMOUNT = 90
   MIN_FARE = 1
+  PENALTY_FARE = 6
   MAX_ERROR = "Cannot exceed max balance £#{MAX_AMOUNT}"
   MIN_ERROR = "You need to have at least £#{MIN_FARE}"
 
@@ -25,9 +26,9 @@ class Oystercard
   end
 
   def touch_in(entry_station)
-    raise MIN_ERROR unless balance > MIN_FARE
-    create_journey(entry_station)
     deduct(@journey.calculate_fare) if in_journey?
+    raise MIN_ERROR unless balance >= MIN_FARE
+    create_journey(entry_station)
     @station = entry_station
   end
 
