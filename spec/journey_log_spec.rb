@@ -18,6 +18,12 @@ describe JourneyLog do
       journey_log.start(station)
       expect(journey_log.list_journeys.size).to eq(1)
     end
+
+    it 'edge case: has two journeys when started twice' do
+      journey_log.start(station)
+      journey_log.start(station)
+      expect(journey_log.list_journeys.size).to eq(2)
+    end
   end
 
   describe '#finish' do
@@ -34,10 +40,11 @@ describe JourneyLog do
       journey_log.finish(station)
       expect(journey_log.list_journeys.size).to eq(1)
     end
-  end
 
-  describe '#log_journey' do
-    it 'adds the journey instance to the journeys' do
+    it 'creates an incomplete journey when touching out w/out touching in' do
+      journey_log.finish(station)
+      expect(journey_log.list_journeys.size).to eq(1)
     end
   end
+
 end
