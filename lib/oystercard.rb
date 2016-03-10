@@ -7,9 +7,12 @@ class Oystercard
   MAX_ERROR = "Cannot exceed max balance £#{MAX_AMOUNT}"
   MIN_ERROR = "You need to have at least £#{MIN_FARE}"
 
-  def initialize
+  def initialize(journey_class = nil)
+    @station = nil
     @balance = 0
     @journeys = []
+    @journey = nil
+    @journey_class = journey_class
   end
 
   def top_up(amount)
@@ -18,20 +21,22 @@ class Oystercard
   end
 
   def in_journey?
-    !!entry_station
+    !!@station
   end
 
   def touch_in(entry_station)
     raise MIN_ERROR unless balance > MIN_FARE
-    @entry_station = entry_station
-    @in_journey = true
+    create_journey(entry_station)
+    deduct(@journey.calculate_fare) if in_journey?
+    @station = entry_station
   end
 
   def touch_out(exit_station)
-    @in_journey = false
-    deduct(MIN_FARE)
-    set_journey(entry_station,exit_station)
-    @entry_station = nil
+    create_journey(nil) unless in_journey?
+    @journey.finish(exit_station)
+    deduct(@journey.calculate_fare)
+    log_journey
+    @station = nil
   end
 
   private
@@ -40,7 +45,12 @@ class Oystercard
     @balance -= fare
   end
 
-  def set_journey(entry_station,exit_station)
-    @journeys << { entry_station => exit_station }
+  def log_journey
+    @journeys << @journey
   end
+
+  def create_journey(station)
+    @journey = @journey_class.new(station)
+  end
+
 end

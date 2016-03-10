@@ -1,9 +1,17 @@
 require 'oystercard'
 
 describe Oystercard do
-  subject(:card) {described_class.new}
-  let(:euston) { double :station }
-  let(:lime_house) { double :station }
+  let(:journey_class) { double :journey_class }
+  subject(:card) {described_class.new(journey_class)}
+  let(:station) { double :station }
+  let(:station) { double :station }
+  let(:journey) { double :journey}
+
+  before do
+    allow(journey).to receive(:finish).with(station).and_return(true)
+    allow(journey).to receive(:calculate_fare).and_return(1)
+    allow(journey_class).to receive(:new).with(station).and_return(journey)
+  end
 
   describe '#balance' do
     it 'checks that it has a balance' do
@@ -23,8 +31,8 @@ describe Oystercard do
 
     describe '#journeys' do
       it 'keeps track of journeys' do
-        card.touch_in(lime_house)
-        expect{ card.touch_out(euston) }.to change{ card.journeys.size }.by(1)
+        card.touch_in(station)
+        expect{ card.touch_out(station) }.to change{ card.journeys.size }.by(1)
       end
     end
 
@@ -37,7 +45,7 @@ describe Oystercard do
 
     context 'when has touched in' do
       before :each do
-        card.touch_in euston
+        card.touch_in station
       end
 
       describe '#touch_in' do
@@ -45,20 +53,17 @@ describe Oystercard do
           expect(card).to be_in_journey
         end
 
-        it 'sets entry station' do
-          expect(card.entry_station).to eq euston
-        end
       end
 
       describe '#touch_out' do
         it 'takes out of journey' do
-          card.touch_out(lime_house)
+          card.touch_out(station)
           expect(card).not_to be_in_journey
         end
 
         it 'deducts minimum fare' do
           min_fare = described_class::MIN_FARE
-          expect{ card.touch_out lime_house }.to change{ card.balance }.by(-min_fare)
+          expect{ card.touch_out station }.to change{ card.balance }.by(-min_fare)
         end
       end
     end
@@ -74,7 +79,7 @@ describe Oystercard do
     describe '#touch_in' do
       it 'raises error' do
         error = described_class::MIN_ERROR
-        expect{ card.touch_in euston }.to raise_error error
+        expect{ card.touch_in station }.to raise_error error
       end
     end
   end
