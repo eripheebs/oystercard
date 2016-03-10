@@ -2,14 +2,17 @@ require 'oystercard'
 
 describe Oystercard do
   let(:journey_class) { double :journey_class }
-  subject(:card) { described_class.new(journey_class) }
-  let(:station) { double :station }
+  let(:journey_log_class) { double :journey_log_class }
+  subject(:card) { described_class.new(journey_log_class, journey_class) }
+  let(:journey_log) { double :journey_log }
   let(:station) { double :station }
   let(:journey) { double :journey }
 
   before do
-    allow(journey).to receive(:finish).with(station).and_return(true)
-    allow(journey).to receive(:calculate_fare).and_return(1)
+    allow(journey_log_class).to receive(:new).with(journey_class).and_return(journey_log)
+    allow(journey_log).to receive(:finish).with(station).and_return(true)
+    allow(journey_log).to receive(:start).with(station).and_return(true)
+    allow(journey_log).to receive(:fare).and_return(1)
     allow(journey_class).to receive(:new).with(station).and_return(journey)
     allow(journey_class).to receive(:new).with(nil).and_return(journey)
   end
@@ -37,16 +40,9 @@ describe Oystercard do
         min = described_class::MIN_FARE
         message = described_class::MIN_ERROR
         card.top_up(penalty - min)
-        allow(journey).to receive(:calculate_fare).and_return(6)
+        allow(journey_log).to receive(:fare).and_return(6)
         card.touch_out(station)
         expect { card.touch_in(station) }.to raise_error message
-      end
-    end
-
-    describe '#journeys' do
-      it 'keeps track of journeys' do
-        card.touch_in(station)
-        expect { card.touch_out(station) }.to change { card.journeys.size }.by(1)
       end
     end
 
@@ -73,8 +69,8 @@ describe Oystercard do
           min = described_class::MIN_FARE
           message = described_class::MIN_ERROR
           card.top_up(penalty - min)
+          allow(journey_log).to receive(:fare).and_return(6)
           card.touch_in(station)
-          allow(journey).to receive(:calculate_fare).and_return(6)
           expect { card.touch_in(station) }.to raise_error message
         end
       end

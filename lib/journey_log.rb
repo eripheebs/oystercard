@@ -21,6 +21,10 @@ class JourneyLog
     log_journey
   end
 
+  def fare
+    @journey.calculate_fare
+  end
+
 private
   def log_journey
     @journeys.pop if @journey.exiting?

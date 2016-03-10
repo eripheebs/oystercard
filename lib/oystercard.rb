@@ -1,6 +1,6 @@
 class Oystercard
 
-  attr_reader :balance, :entry_station, :journeys
+  attr_reader :balance
 
   MAX_AMOUNT = 90
   MIN_FARE = 1
@@ -8,12 +8,11 @@ class Oystercard
   MAX_ERROR = "Cannot exceed max balance £#{MAX_AMOUNT}"
   MIN_ERROR = "You need to have at least £#{MIN_FARE}"
 
-  def initialize(journey_class = nil)
+  def initialize(journey_log_class, journey_class)
     @station = nil
     @balance = 0
-    @journeys = []
-    @journey = nil
-    @journey_class = journey_class
+    @journey_log_class = journey_log_class
+    @journey_log = journey_log_class.new(journey_class)
   end
 
   def top_up(amount)
@@ -21,22 +20,20 @@ class Oystercard
     @balance += amount
   end
 
+  def touch_in(entry_station)
+    raise MIN_ERROR unless balance >= MIN_FARE
+    @journey_log.start(entry_station)
+    deduct(@journey_log.fare) if in_journey?
+    @station = entry_station
+  end
+
   def in_journey?
     !!@station
   end
 
-  def touch_in(entry_station)
-    deduct(@journey.calculate_fare) if in_journey?
-    raise MIN_ERROR unless balance >= MIN_FARE
-    create_journey(entry_station)
-    @station = entry_station
-  end
-
   def touch_out(exit_station)
-    create_journey(nil) unless in_journey?
-    @journey.finish(exit_station)
-    deduct(@journey.calculate_fare)
-    log_journey
+    @journey_log.finish(exit_station)
+    deduct(@journey_log.fare)
     @station = nil
   end
 
@@ -44,14 +41,6 @@ class Oystercard
 
   def deduct(fare)
     @balance -= fare
-  end
-
-  def log_journey
-    @journeys << @journey
-  end
-
-  def create_journey(station)
-    @journey = @journey_class.new(station)
   end
 
 end
